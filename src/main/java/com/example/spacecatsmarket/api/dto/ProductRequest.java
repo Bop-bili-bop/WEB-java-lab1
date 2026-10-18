@@ -30,7 +30,8 @@ public record ProductRequest(
 		@Email
 		String sellerEmail,
 
+		@NotNull
 		@Min(0)
-		int stockQuantity
+		Integer stockQuantity
 ) {
 }

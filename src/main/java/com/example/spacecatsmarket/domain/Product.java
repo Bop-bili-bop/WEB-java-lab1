@@ -5,13 +5,13 @@ import java.util.Objects;
 
 public class Product {
 
-	private String id;
-	private String name;
-	private String description;
-	private BigDecimal price;
-	private String categoryId;
-	private String sellerEmail;
-	private int stockQuantity;
+	private final String id;
+	private final String name;
+	private final String description;
+	private final BigDecimal price;
+	private final String categoryId;
+	private final String sellerEmail;
+	private final int stockQuantity;
 
 	public Product(
 			String id,
@@ -22,13 +22,26 @@ public class Product {
 			String sellerEmail,
 			int stockQuantity
 	) {
-		this.id = Objects.requireNonNull(id, "id must not be null");
-		this.name = Objects.requireNonNull(name, "name must not be null");
-		this.description = Objects.requireNonNull(description, "description must not be null");
+		this.id = requireNonBlank(id, "id");
+		this.name = requireNonBlank(name, "name");
+		this.description = requireNonBlank(description, "description");
 		this.price = Objects.requireNonNull(price, "price must not be null");
-		this.categoryId = Objects.requireNonNull(categoryId, "categoryId must not be null");
-		this.sellerEmail = Objects.requireNonNull(sellerEmail, "sellerEmail must not be null");
+		if (price.signum() <= 0) {
+			throw new IllegalArgumentException("price must be greater than 0");
+		}
+		this.categoryId = requireNonBlank(categoryId, "categoryId");
+		this.sellerEmail = requireNonBlank(sellerEmail, "sellerEmail");
+		if (stockQuantity < 0) {
+			throw new IllegalArgumentException("stockQuantity must not be negative");
+		}
 		this.stockQuantity = stockQuantity;
+	}
+
+	private static String requireNonBlank(String value, String field) {
+		if (value == null || value.isBlank()) {
+			throw new IllegalArgumentException(field + " must not be blank");
+		}
+		return value;
 	}
 
 	public String getId() {

@@ -1,39 +1,30 @@
 package com.example.spacecatsmarket.application;
 
-import com.example.spacecatsmarket.api.dto.PagedResponse;
-import com.example.spacecatsmarket.api.dto.ProductRequest;
-import com.example.spacecatsmarket.api.dto.ProductResponse;
 import com.example.spacecatsmarket.application.exception.ProductNotFoundException;
-import com.example.spacecatsmarket.application.mapper.ProductMapper;
 import com.example.spacecatsmarket.domain.Product;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentSkipListMap;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ProductService {
 
-	private final ProductMapper productMapper;
-	private final Map<String, Product> products = new LinkedHashMap<>();
+	private final Map<String, Product> products = new ConcurrentSkipListMap<>();
 
-	public ProductService(ProductMapper productMapper) {
-		this.productMapper = productMapper;
+	public ProductService() {
 		seedProducts();
 	}
 
-	public PagedResponse<ProductResponse> findAll(int page, int size) {
-		List<ProductResponse> allProducts = products.values().stream()
-				.map(productMapper::toDto)
-				.toList();
+	public ProductPage findAll(int page, int size) {
+		List<Product> allProducts = List.copyOf(products.values());
 
-		int fromIndex = Math.min(page * size, allProducts.size());
+		int fromIndex = (int) Math.min((long) page * size, allProducts.size());
 		int toIndex = Math.min(fromIndex + size, allProducts.size());
 
-		return new PagedResponse<>(
+		return new ProductPage(
 				allProducts.subList(fromIndex, toIndex),
 				page,
 				size,
@@ -41,27 +32,29 @@ public class ProductService {
 		);
 	}
 
-	public ProductResponse findById(String id) {
-		return productMapper.toDto(getProductOrThrow(id));
+	public Product findById(String id) {
+		return getProductOrThrow(id);
 	}
 
-	public ProductResponse create(ProductRequest request) {
+	public Product create(ProductCommand command) {
 		String id = UUID.randomUUID().toString();
-		Product product = productMapper.toDomain(id, request);
+		Product product = toProduct(id, command);
 		products.put(id, product);
-		return productMapper.toDto(product);
+		return product;
 	}
 
-	public ProductResponse update(String id, ProductRequest request) {
-		getProductOrThrow(id);
-		Product updatedProduct = productMapper.toDomain(id, request);
-		products.put(id, updatedProduct);
-		return productMapper.toDto(updatedProduct);
+	public Product update(String id, ProductCommand command) {
+		Product updatedProduct = toProduct(id, command);
+		if (products.replace(id, updatedProduct) == null) {
+			throw new ProductNotFoundException(id);
+		}
+		return updatedProduct;
 	}
 
 	public void delete(String id) {
-		getProductOrThrow(id);
-		products.remove(id);
+		if (products.remove(id) == null) {
+			throw new ProductNotFoundException(id);
+		}
 	}
 
 	private Product getProductOrThrow(String id) {
@@ -72,9 +65,20 @@ public class ProductService {
 		return product;
 	}
 
+	private Product toProduct(String id, ProductCommand command) {
+		return new Product(
+				id,
+				command.name(),
+				command.description(),
+				command.price(),
+				command.categoryId(),
+				command.sellerEmail(),
+				command.stockQuantity()
+		);
+	}
+
 	private void seedProducts() {
-		List<Product> mockProducts = new ArrayList<>();
-		mockProducts.add(new Product(
+		List<Product> mockProducts = List.of(new Product(
 				"prd-star-yarn",
 				"Star Antigravity Yarn",
 				"Self-floating yarn ball for zero-gravity cat lounges.",
@@ -82,8 +86,7 @@ public class ProductService {
 				"cat-toys",
 				"vendor@cosmo-cats.market",
 				42
-		));
-		mockProducts.add(new Product(
+		), new Product(
 				"prd-galaxy-milk",
 				"Galaxy Milk",
 				"Lactose-free cosmic milk enriched with meteor minerals.",
@@ -91,8 +94,7 @@ public class ProductService {
 				"cat-food",
 				"milkbar@cosmo-cats.market",
 				128
-		));
-		mockProducts.add(new Product(
+		), new Product(
 				"prd-comet-scratcher",
 				"Comet Scratcher",
 				"Durable asteroid-fiber scratching post for interstellar claws.",
