@@ -2,6 +2,7 @@ package com.example.spacecatsmarket.api.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
 
@@ -26,6 +27,7 @@ public class CosmicWordValidator implements ConstraintValidator<CosmicWordCheck,
 		}
 
 		String normalized = value.toLowerCase(Locale.ROOT);
-		return COSMIC_WORDS.stream().anyMatch(normalized::contains);
+		return Arrays.stream(normalized.split("[^a-z]+"))
+				.anyMatch(COSMIC_WORDS::contains);
 	}
 }

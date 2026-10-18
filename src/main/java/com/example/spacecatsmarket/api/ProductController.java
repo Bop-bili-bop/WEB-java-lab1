@@ -3,6 +3,7 @@ package com.example.spacecatsmarket.api;
 import com.example.spacecatsmarket.api.dto.PagedResponse;
 import com.example.spacecatsmarket.api.dto.ProductRequest;
 import com.example.spacecatsmarket.api.dto.ProductResponse;
+import com.example.spacecatsmarket.api.mapper.ProductMapper;
 import com.example.spacecatsmarket.application.ProductService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -27,9 +28,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class ProductController {
 
 	private final ProductService productService;
+	private final ProductMapper productMapper;
 
-	public ProductController(ProductService productService) {
+	public ProductController(ProductService productService, ProductMapper productMapper) {
 		this.productService = productService;
+		this.productMapper = productMapper;
 	}
 
 	@GetMapping
@@ -37,17 +40,17 @@ public class ProductController {
 			@RequestParam(defaultValue = "0") @Min(0) int page,
 			@RequestParam(defaultValue = "10") @Min(1) @Max(100) int size
 	) {
-		return productService.findAll(page, size);
+		return productMapper.toDto(productService.findAll(page, size));
 	}
 
 	@GetMapping("/{id}")
 	public ProductResponse findById(@PathVariable String id) {
-		return productService.findById(id);
+		return productMapper.toDto(productService.findById(id));
 	}
 
 	@PostMapping
 	public ResponseEntity<ProductResponse> create(@Valid @RequestBody ProductRequest request) {
-		ProductResponse response = productService.create(request);
+		ProductResponse response = productMapper.toDto(productService.create(productMapper.toCommand(request)));
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
 				.path("/{id}")
 				.buildAndExpand(response.id())
@@ -58,7 +61,7 @@ public class ProductController {
 
 	@PutMapping("/{id}")
 	public ProductResponse update(@PathVariable String id, @Valid @RequestBody ProductRequest request) {
-		return productService.update(id, request);
+		return productMapper.toDto(productService.update(id, productMapper.toCommand(request)));
 	}
 
 	@DeleteMapping("/{id}")
