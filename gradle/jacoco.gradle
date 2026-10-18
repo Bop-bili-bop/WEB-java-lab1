@@ -1,0 +1,42 @@
+apply plugin: 'jacoco'
+
+jacoco {
+	toolVersion = '0.8.14'
+	reportsDirectory = layout.buildDirectory.dir('reports/coverage')
+}
+
+def serviceClasses = files(sourceSets.main.output.classesDirs.files.collect {
+	fileTree(dir: it, include: [
+			'com/example/spacecatsmarket/application/ProductService*',
+			'com/example/spacecatsmarket/application/exception/**'
+	])
+})
+
+jacocoTestReport {
+	dependsOn test
+	classDirectories.setFrom(serviceClasses)
+	reports {
+		csv.required = true
+		xml.required = true
+		html.required = true
+		html.outputLocation = layout.buildDirectory.dir('reports/coverage')
+	}
+	finalizedBy jacocoTestCoverageVerification
+}
+
+jacocoTestCoverageVerification {
+	dependsOn jacocoTestReport
+	classDirectories.setFrom(serviceClasses)
+	violationRules {
+		rule {
+			element = 'SOURCEFILE'
+			limit {
+				counter = 'LINE'
+				minimum = minimumServiceCoverage
+			}
+		}
+	}
+}
+
+test.finalizedBy jacocoTestReport
+check.dependsOn jacocoTestCoverageVerification
